@@ -21,6 +21,7 @@ class PhotoCell: UITableViewCell {
         newImageView.translatesAutoresizingMaskIntoConstraints = false
         newImageView.contentMode = .scaleAspectFit
         newImageView.layer.cornerRadius = 10.0
+        newImageView.clipsToBounds = true
         return newImageView
     }()
 
@@ -45,7 +46,12 @@ class PhotoCell: UITableViewCell {
         }
         userLabel.text = "By \(goodModel.user)"
         tagsLabel.text = goodModel.tags
-        photoView.image = goodModel.image
+        if memoryCache?.isCached(forKey: goodModel.imageURL) ?? false, let image = memoryCache?.value(forKey: goodModel.imageURL) {
+            photoView.image = image.image
+            goodModel.state = .downloaded
+        } else {
+            self.photoView.image = goodModel.image
+        }
     }
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
@@ -57,22 +63,22 @@ class PhotoCell: UITableViewCell {
         selectionStyle = .none
 
 
-          if accessoryView == nil {
+        if accessoryView == nil {
             let indicator = UIActivityIndicatorView(style: .gray)
             accessoryView = indicator
-          }
+        }
 
         NSLayoutConstraint.activate([
 
-            photoView.topAnchor.constraint(equalTo: contentView.topAnchor, constant:16),
-            photoView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: UIConstants.Margin),
-            photoView.widthAnchor.constraint(equalToConstant: 640),
-            photoView.heightAnchor.constraint(equalToConstant: 400),
+            photoView.topAnchor.constraint(equalTo: contentView.topAnchor, constant:UIConstants.Margin),
+            photoView.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            photoView.widthAnchor.constraint(equalToConstant: Constants.ImageWidth),
+            photoView.heightAnchor.constraint(equalToConstant: Constants.ImageHeight),
 
             userLabel.topAnchor.constraint(equalTo: photoView.bottomAnchor, constant: 8),
             userLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: UIConstants.Margin),
 
-            tagsLabel.topAnchor.constraint(equalTo: userLabel.bottomAnchor, constant: 8),
+            tagsLabel.topAnchor.constraint(equalTo: userLabel.bottomAnchor),
             tagsLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: UIConstants.Margin),
             tagsLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -UIConstants.Margin),
 

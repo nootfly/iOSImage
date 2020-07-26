@@ -12,6 +12,7 @@ class ViewController: UIViewController {
     let tableView = UITableView()
     let searchController = UISearchController(searchResultsController: nil)
     let viewModel = ViewModel()
+    let child = SpinnerViewController()
 
 
     override func viewDidLoad() {
@@ -21,24 +22,25 @@ class ViewController: UIViewController {
         addSearchController()
     }
 
+    // MARK: - subviews
+
     func addTable()  {
         tableView.translatesAutoresizingMaskIntoConstraints = false
 
         tableView.dataSource = self
+        tableView.delegate = self
 
         tableView.rowHeight = UITableView.automaticDimension
-        tableView.estimatedRowHeight = 120
-        tableView.separatorStyle = .none
-        
+        tableView.estimatedRowHeight = 200
 
         tableView.register(PhotoCell.self, forCellReuseIdentifier: Constants.CellIdentifier)
 
         view.addSubview(tableView)
         NSLayoutConstraint.activate([
-            tableView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 16),
-            tableView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
-            tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant:16),
-            tableView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16)
+            tableView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: UIConstants.Margin),
+            tableView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -UIConstants.Margin),
+            tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant:UIConstants.Margin),
+            tableView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -UIConstants.Margin)
         ])
     }
 
@@ -57,6 +59,8 @@ class ViewController: UIViewController {
     }
 }
 
+// MARK: - UISearchResultsUpdating
+
 extension ViewController: UISearchResultsUpdating {
     func updateSearchResults(for searchController: UISearchController) {
         let searchBar = searchController.searchBar
@@ -65,10 +69,27 @@ extension ViewController: UISearchResultsUpdating {
             return
         }
         if searchText.count > 3 {
+            showSpinnerView()
             viewModel.searchImages(query: searchText) { error in
-                self.tableView.reloadData()
+                if !error.isEmpty {
+                    self.showError()
+                } else {
+                    self.tableView.reloadData()
+                }
+
+                self.hideSpinnerView()
             }
+        } else {
+            viewModel.clear()
+            self.tableView.reloadData()
         }
+    }
+
+    func showError() {
+        let alertController = UIAlertController(title: "Oops!", message: "There was an error fetching photo details.", preferredStyle: .alert)
+        let okAction = UIAlertAction(title: "OK", style: .default)
+        alertController.addAction(okAction)
+        present(alertController, animated: true, completion: nil)
     }
 }
 
@@ -84,7 +105,6 @@ extension ViewController: UITableViewDataSource {
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell  {
 
-
         guard let cell = tableView.dequeueReusableCell(withIdentifier: Constants.CellIdentifier, for: indexPath) as? PhotoCell else {
             return UITableViewCell()
 
@@ -94,6 +114,16 @@ extension ViewController: UITableViewDataSource {
 
         cell.model = photoDetail
 
+        handleImageDownload(cell, photoDetail, tableView, indexPath)
+
+        return cell
+    }
+}
+
+// MARK: - Image donwload
+
+extension ViewController {
+    fileprivate func handleImageDownload(_ cell: PhotoCell, _ photoDetail: PhotoDisplayModel, _ tableView: UITableView, _ indexPath: IndexPath) {
         if let indicator = cell.accessoryView as? UIActivityIndicatorView {
             switch (photoDetail.state) {
             case .failed, .downloaded :
@@ -105,8 +135,6 @@ extension ViewController: UITableViewDataSource {
                 }
             }
         }
-
-        return cell
     }
 
     func startOperations(for photoRecord: PhotoDisplayModel, at indexPath: IndexPath) {
@@ -142,5 +170,106 @@ extension ViewController: UITableViewDataSource {
 
         viewModel.pendingOperations.downloadQueue.addOperation(downloader)
     }
+
+
+
+    // MARK: - operation management
+
+    func suspendAllOperations() {
+      viewModel.pendingOperations.downloadQueue.isSuspended = true
+    }
+
+    func resumeAllOperations() {
+      viewModel.pendingOperations.downloadQueue.isSuspended = false
+    }
+
+    func loadImagesForOnscreenCells() {
+      if let pathsArray = tableView.indexPathsForVisibleRows {
+
+        let allPendingOperations = Set(viewModel.pendingOperations.downloadsInProgress.keys)
+
+
+        var toBeCancelled = allPendingOperations
+        let visiblePaths = Set(pathsArray)
+        toBeCancelled.subtract(visiblePaths)
+
+
+        var toBeStarted = visiblePaths
+        toBeStarted.subtract(allPendingOperations)
+
+
+        for indexPath in toBeCancelled {
+            if let pendingDownload = viewModel.pendingOperations.downloadsInProgress[indexPath] {
+            pendingDownload.cancel()
+          }
+
+          viewModel.pendingOperations.downloadsInProgress.removeValue(forKey: indexPath)
+
+        }
+
+
+        for indexPath in toBeStarted {
+          let recordToProcess = viewModel.photos[indexPath.row]
+          startOperations(for: recordToProcess, at: indexPath)
+        }
+      }
+    }
 }
 
+  // MARK: - scrollview delegate methods
+
+extension ViewController: UIScrollViewDelegate, UITableViewDelegate {
+
+      func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+
+      suspendAllOperations()
+    }
+
+      func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+
+      if !decelerate {
+        loadImagesForOnscreenCells()
+        resumeAllOperations()
+      }
+    }
+
+      func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+
+      loadImagesForOnscreenCells()
+      resumeAllOperations()
+    }
+}
+
+// MARK: - SpinnerViewController
+
+class SpinnerViewController: UIViewController {
+    var spinner = UIActivityIndicatorView(style: .gray)
+
+    override func loadView() {
+        view = UIView()
+        view.backgroundColor = .white
+        //view.backgroundColor = UIColor(white: 0, alpha: 0.7)
+
+        spinner.translatesAutoresizingMaskIntoConstraints = false
+        spinner.startAnimating()
+        view.addSubview(spinner)
+
+        spinner.centerXAnchor.constraint(equalTo: view.centerXAnchor).isActive = true
+        spinner.centerYAnchor.constraint(equalTo: view.centerYAnchor).isActive = true
+    }
+}
+
+extension ViewController {
+    func showSpinnerView() {
+        addChild(child)
+        child.view.frame = view.frame
+        view.addSubview(child.view)
+        child.didMove(toParent: self)
+    }
+
+    func hideSpinnerView() {
+        child.willMove(toParent: nil)
+        child.view.removeFromSuperview()
+        child.removeFromParent()
+    }
+}

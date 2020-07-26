@@ -11,7 +11,7 @@ import Foundation
 class ViewModel {
 
     var photos: [PhotoDisplayModel] = []
-     let pendingOperations = PendingOperations()
+    let pendingOperations = PendingOperations()
     let apiHelper = APIHelper()
 
     func searchImages(query: String, commplete: @escaping (String) -> Void)  {
@@ -22,9 +22,13 @@ class ViewModel {
 
                 commplete(error)
             } else {
-                 commplete(error)
+                commplete(error)
             }
         }
+    }
+
+    func clear() {
+        photos = []
     }
 }
 

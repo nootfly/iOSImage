@@ -10,25 +10,30 @@ import XCTest
 @testable import PixabayImage
 
 class PixabayImageTests: XCTestCase {
+    var cache :MemoryCache<CachImage>?
 
     override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
+        cache = MemoryCache<CachImage>(countLimit: Constants.ImageCacheCount)
     }
 
     override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
+        cache = nil
     }
 
-    func testExample() throws {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-    }
-
-    func testPerformanceExample() throws {
-        // This is an example of a performance test case.
-        self.measure {
-            // Put the code you want to measure the time of here.
+    func testCache() throws {
+        guard let image = UIImage(named: "Placeholder") else {
+            return
         }
+        for i in 1...110 {
+            cache?.store(value: CachImage(image), forKey: String(i))
+        }
+
+        XCTAssertTrue(cache?.queue.count == 100)
+        XCTAssertFalse(cache?.isCached(forKey: "1") ?? false)
+        XCTAssertTrue(cache?.isCached(forKey: "110") ?? false)
+
     }
+
+
 
 }

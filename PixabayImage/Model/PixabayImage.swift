@@ -31,15 +31,6 @@ struct PixabayImage: Codable {
     let user: String
     let userImageURL: String
 
-
-
-
-//    enum CodingKeys: String, CodingKey {
-//        case id, pageURL, type, tags, previewURL, previewWidth, previewHeight, webformatURL, webformatWidth, webformatHeight, largeImageURL, imageWidth, imageHeight, imageSize, views, downloads, favorites, likes, comments
-//        case userID = "user_id"
-//        case user, userImageURL
-//    }
-
     var displayModel: PhotoDisplayModel {
         PhotoDisplayModel(tags: tags, imageURL: webformatURL, user: user)
     }
@@ -56,6 +47,22 @@ class PhotoDisplayModel {
         self.tags = tags
         self.imageURL = imageURL
         self.user = user
+    }
+}
+
+class CachImage: CacheCostCalculable {
+    var image: UIImage
+
+    var cacheCost: Int {
+        let pixel = Int(image.size.width * image.size.height * image.scale * image.scale)
+        guard let cgImage = image.cgImage else {
+               return pixel * 4
+           }
+           return pixel * cgImage.bitsPerPixel / 8
+       }
+
+    init(_ image: UIImage) {
+        self.image = image
     }
 }
 

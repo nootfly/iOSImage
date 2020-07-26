@@ -61,8 +61,11 @@ public class MemoryCache<T: CacheCostCalculable> {
     private let lock = NSLock()
 
 
-    public init(totalCostLimit: Int, countLimit: Int) {
-        storage.totalCostLimit = totalCostLimit
+    public init(countLimit: Int) {
+        let totalMemory = ProcessInfo.processInfo.physicalMemory
+        let costLimit = totalMemory / 5
+
+        storage.totalCostLimit = (costLimit > Int.max) ? Int.max : Int(costLimit)
         storage.countLimit = countLimit
     }
 
@@ -83,10 +86,12 @@ public class MemoryCache<T: CacheCostCalculable> {
     }
 
 
-    func storeNoThrow(
+    func store(
         value: T,
-        forKey key: String)
-    {
+        forKey key: String) {
+
+        removeOldest()
+
         lock.lock()
         defer { lock.unlock() }
 

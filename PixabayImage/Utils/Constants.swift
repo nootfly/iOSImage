@@ -19,6 +19,9 @@ struct Constants {
     static let PageCount = "50"
     static let CellIdentifier = "CellIdentifier"
     static let Orientation = "vertical"
+    static let ImageCacheCount = 100
+    static let ImageWidth: CGFloat = 320
+    static let ImageHeight: CGFloat = 184
 
 }
 

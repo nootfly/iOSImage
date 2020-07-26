@@ -13,12 +13,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
 
-    public var cache = MemoryCache<T: CacheCostCalculable>(totalCostLimit: 100000, countLimit: 100)
-
-
-
-
-
+    var cache = MemoryCache<CachImage>(countLimit: Constants.ImageCacheCount)
 
 }
 
