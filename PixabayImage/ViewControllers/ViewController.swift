@@ -70,14 +70,14 @@ extension ViewController: UISearchResultsUpdating {
         }
         if searchText.count > 3 {
             showSpinnerView()
-            viewModel.searchImages(query: searchText) { error in
+            viewModel.searchImages(query: searchText) { [weak self] error in
                 if !error.isEmpty {
-                    self.showError()
+                    self?.showError()
                 } else {
-                    self.tableView.reloadData()
+                    self?.tableView.reloadData()
                 }
 
-                self.hideSpinnerView()
+                self?.hideSpinnerView()
             }
         } else {
             viewModel.clear()

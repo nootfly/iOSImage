@@ -10,7 +10,7 @@
 
 4. `NSCache`  is used for memory cache and a queue is used to remove oldest image from the cache
 
-## Refrences
+## References
 
 https://www.raywenderlich.com/5293-operation-and-operationqueue-tutorial-in-swift
 
